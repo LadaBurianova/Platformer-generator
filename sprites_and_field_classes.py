@@ -38,7 +38,7 @@ class Field:
                 writer.writerow(line)
 
 
-class Person:
+class Person(pygame.sprite.Sprite):
     EXP = '.png'
 
     def __init__(self, n):
@@ -46,7 +46,7 @@ class Person:
         self.img = load_image('person', n + Cell.EXP)
 
 
-class Cell(pygame.Sprite.sprite):
+class Cell(pygame.sprite.Sprite):
     EXP = '.png'
 
     def __init__(self, n):
