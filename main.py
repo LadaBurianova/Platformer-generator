@@ -5,7 +5,7 @@ import csv
 
 W = 800  # width of window
 H = 600  # height of window
-FPS = 15
+FPS = 20
 
 
 def load_image(folder, name):
@@ -15,71 +15,6 @@ def load_image(folder, name):
         print(f"Файл '{full_path}' не найден")
         exit()
     return pygame.image.load(full_path)
-
-
-class Person(pygame.sprite.Sprite):
-    EXP = '.png'  # expansion
-
-    def __init__(self, pos_x, pos_y):
-        super().__init__(person_sprites, all_sprites)
-        self.image = load_image('person', 'pre-person.png')  # TODO: change pre-person.png to n + Cell.EXP
-
-        self.rect = self.image.get_rect()
-        self.mask = pygame.mask.from_surface(self.image)
-        self.rect.x = pos_x
-        self.rect.y = pos_y
-        self.field = field
-        self.vx = 0
-        self.vy = 0
-        self.g = 10
-        self.falling = True
-        self.t_falling = 0
-
-    def update(self):
-        if pygame.sprite.spritecollideany(self, green_cells_sprites):
-            print('you_win')
-        elif pygame.sprite.spritecollideany(self, cells_sprites):
-            end('gameover_v0.png')
-            start_screen()
-        elif pygame.sprite.spritecollideany(self, cells_sprites):
-            self.vy = 0
-        elif not pygame.sprite.spritecollideany(self, cells_sprites):
-            self.rect = self.rect.move(self.vx, self.vy)
-            self.vy += self.g * self.t_falling
-            self.t_falling += 0.1
-
-
-def start_screen():
-    pass
-
-
-def end(img):
-    image = pygame.image.load(img)
-    screen.fill((0, 0, 0))
-    screen.blit(image, (0, 0))
-    pygame.display.flip()
-    run = True
-    while run:
-        screen.fill((0, 0, 0))
-        screen.blit(image, (0, 0))
-        pygame.display.flip()
-        for ev in pygame.event.get():
-            if ev.type == pygame.KEYDOWN and ev.key == pygame.K_TAB:
-                run = False
-            if ev.type == pygame.QUIT:
-                pygame.quit()
-
-class Cell(pygame.sprite.Sprite):
-    EXP = '.png'
-
-    def __init__(self, n, pos_x, pos_y):
-        if n == '7':
-            super().__init__(yellow_cells_sprites, cells_sprites, all_sprites)
-        else:
-            super().__init__(cells_sprites, all_sprites)
-        self.image = load_image('cells', n + Cell.EXP)
-        self.mask = pygame.mask.from_surface(self.image)
-        self.rect = self.image.get_rect().move(60 * pos_x, 60 * pos_y)
 
 
 class Field:
@@ -112,6 +47,19 @@ class Field:
                 writer.writerow(line)
 
 
+class Cell(pygame.sprite.Sprite):
+    EXP = '.png'
+
+    def __init__(self, n, pos_x, pos_y):
+        if n == '7':
+            super().__init__(yellow_cells_sprites, cells_sprites, all_sprites)
+        else:
+            super().__init__(cells_sprites, all_sprites)
+        self.image = load_image('cells', n + Cell.EXP)
+        self.mask = pygame.mask.from_surface(self.image)
+        self.rect = self.image.get_rect().move(60 * pos_x, 60 * pos_y)
+
+
 class Camera:
     def __init__(self):
         self.dx = 0
@@ -123,16 +71,91 @@ class Camera:
         self.dx = -(target.rect.x + target.rect.w // 2 - W // 2)
 
 
+class Person(pygame.sprite.Sprite):
+    EXP = '.png'  # expansion
+
+    def __init__(self, pos_x, pos_y):
+        super().__init__(person_sprites, all_sprites)
+        self.image = load_image('person', 'pre-person.png')  # TODO: change pre-person.png to n + Cell.EXP
+
+        self.rect = self.image.get_rect()
+        self.mask = pygame.mask.from_surface(self.image)
+        self.rect.x = pos_x
+        self.rect.y = pos_y
+        self.field = field
+        self.vx = 0
+        self.vy = 0
+        self.g = 10
+        self.falling = True
+        self.t_falling = 0
+
+    def update(self):
+        if pygame.sprite.spritecollideany(self, green_cells_sprites):
+            print('you_win')
+
+        if pygame.sprite.spritecollideany(self, cells_sprites):
+            if self.t_falling:
+                self.vy = 0
+                self.vx = 0
+                self.t_falling = 0
+
+        else:
+            self.vy += self.g * self.t_falling
+            self.t_falling += 0.01
+        self.rect = self.rect.move(self.vx, self.vy)
+
+        if pygame.sprite.spritecollideany(self, yellow_cells_sprites):
+            end('gameover_v0.png')
+            start_screen()
+
+
+def start_screen():
+    pass
+
+
+def end(img):
+    image = pygame.image.load(img)
+    screen.fill((0, 0, 0))
+    screen.blit(image, (0, 0))
+    pygame.display.flip()
+    run = True
+    while run:
+        screen.fill((0, 0, 0))
+        screen.blit(image, (0, 0))
+        pygame.display.flip()
+        for ev in pygame.event.get():
+            if ev.type == pygame.KEYDOWN and ev.key == pygame.K_TAB:
+                run = False
+            if ev.type == pygame.QUIT:
+                pygame.quit()
+                exit()
+
+
 def loaded_level():
     run = True
     clock = pygame.time.Clock()
     while run:
         clock.tick(FPS)
-        for event in pygame.event.get():
-            if event.type == pygame.KEYDOWN and event.key == pygame.K_TAB:
-                run = False
+        for ev in pygame.event.get():
+            if ev.type == pygame.KEYDOWN:
+                if ev.key == pygame.K_TAB:
+                    run = False
+                pressed = pygame.key.get_pressed()
+                if pressed[pygame.K_d] and pygame.sprite.spritecollideany(person, cells_sprites):
+                    person.vx += 4
+
+                if pressed[pygame.K_a] and pygame.sprite.spritecollideany(person, cells_sprites):
+                    person.vx -= 4
+
+                if pressed[pygame.K_SPACE]:
+                    person.vy -= 8
+                    person.t_falling = 0
+
         screen.fill((0, 0, 0))
         all_sprites.update()
+        camera.update(person)
+        for sprite in all_sprites:
+            camera.apply(sprite)
         cells_sprites.draw(screen)
         person_sprites.draw(screen)
         pygame.display.flip()
@@ -174,6 +197,7 @@ while run:
                 if ev.key == pygame.K_RETURN:
                     try:
                         with open(text, 'r', encoding='utf-8') as f:
+                            camera = Camera()
                             field = Field(f)
                             person = Person(0, 50)
                             person.add(person_sprites)
