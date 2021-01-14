@@ -51,6 +51,7 @@ class Cell(pygame.sprite.Sprite):
     EXP = '.png'
 
     def __init__(self, n, pos_x, pos_y):
+        self.n = n
         if n == '7':
             super().__init__(yellow_cells_sprites, cells_sprites, all_sprites)
         else:
@@ -58,6 +59,19 @@ class Cell(pygame.sprite.Sprite):
         self.image = load_image('cells', n + Cell.EXP)
         self.mask = pygame.mask.from_surface(self.image)
         self.rect = self.image.get_rect().move(60 * pos_x, 60 * pos_y)
+
+
+class Border(pygame.sprite.Sprite):
+    def __init__(self, x1, y1, x2, y2):
+        super().__init__(all_sprites)
+        if x1 == x2:
+            self.add(vertical_borders)
+            self.image = pygame.Surface([1, y2 - y1])
+            self.rect = pygame.Rect(x1, y1, 1, y2 - y1)
+        else:
+            self.add(horizontal_borders)
+            self.image = pygame.Surface([x2 - x1, 1])
+            self.rect = pygame.Rect(x1, y1, x2 - x1, 1)
 
 
 class Camera:
@@ -90,10 +104,19 @@ class Person(pygame.sprite.Sprite):
         self.t_falling = 0
 
     def update(self):
+        if pygame.sprite.spritecollideany(self, horizontal_borders):
+            self.vy = -self.vy
+        if pygame.sprite.spritecollideany(self, vertical_borders):
+            self.vx = -self.vx
+
         if pygame.sprite.spritecollideany(self, green_cells_sprites):
             print('you_win')
 
-        if pygame.sprite.spritecollideany(self, cells_sprites):
+        elif pygame.sprite.spritecollideany(self, yellow_cells_sprites):
+            end('gameover_v0.png')
+            start_screen()
+
+        elif pygame.sprite.spritecollideany(self, cells_sprites):
             if self.t_falling:
                 self.vy = 0
                 self.vx = 0
@@ -103,10 +126,6 @@ class Person(pygame.sprite.Sprite):
             self.vy += self.g * self.t_falling
             self.t_falling += 0.01
         self.rect = self.rect.move(self.vx, self.vy)
-
-        if pygame.sprite.spritecollideany(self, yellow_cells_sprites):
-            end('gameover_v0.png')
-            start_screen()
 
 
 def start_screen():
@@ -139,16 +158,16 @@ def loaded_level():
         for ev in pygame.event.get():
             if ev.type == pygame.KEYDOWN:
                 if ev.key == pygame.K_TAB:
-                    run = False
+                    break
                 pressed = pygame.key.get_pressed()
                 if pressed[pygame.K_d] and pygame.sprite.spritecollideany(person, cells_sprites):
-                    person.vx += 4
+                    person.vx += 5
 
                 if pressed[pygame.K_a] and pygame.sprite.spritecollideany(person, cells_sprites):
-                    person.vx -= 4
+                    person.vx -= 5
 
                 if pressed[pygame.K_SPACE]:
-                    person.vy -= 8
+                    person.vy -= 10
                     person.t_falling = 0
 
         screen.fill((0, 0, 0))
@@ -166,6 +185,12 @@ cells_sprites = pygame.sprite.Group()
 yellow_cells_sprites = pygame.sprite.Group()
 green_cells_sprites = pygame.sprite.Group()
 person_sprites = pygame.sprite.Group()
+horizontal_borders = pygame.sprite.Group()
+vertical_borders = pygame.sprite.Group()
+horizontal_borders.add(Border(-1, -1, 6601, -1))
+horizontal_borders.add(Border(-1, H + 1, 6601, H + 1))
+vertical_borders.add(Border(-1, -1, -1, H + 1))
+vertical_borders.add(Border(6601, -1, 6601, H + 1))
 
 pygame.init()
 screen = pygame.display.set_mode((W, H))
