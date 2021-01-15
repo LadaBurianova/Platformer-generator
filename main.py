@@ -1,5 +1,5 @@
 import pygame
-from os.path import join, isfile
+import os
 from sys import exit
 import csv
 
@@ -10,8 +10,8 @@ FPS = 20
 
 def load_image(folder, name):
     """  Loading image.  """
-    full_path = join(folder, name)
-    if not isfile(full_path):
+    full_path = os.path.join(folder, name)
+    if not os.path.isfile(full_path):
         print(f"Файл '{full_path}' не найден")
         exit()
     return pygame.image.load(full_path)
@@ -86,8 +86,11 @@ class Person(pygame.sprite.Sprite):
 
     def __init__(self, pos_x, pos_y):
         super().__init__(person_sprites, all_sprites)
-        self.image = load_image('person', 'right0001.png')  # TODO: change pre-person.png to n + Cell.EXP
-
+        self.image = load_image('person', 'right0001.png')
+        self.r_frames = self.load_frames('right')
+        self.l_frames = self.load_frames('left')
+        self.frames = self.r_frames
+        self.cur = 0
         self.rect = self.image.get_rect()
         self.rect.x = pos_x
         self.rect.y = pos_y
@@ -97,7 +100,16 @@ class Person(pygame.sprite.Sprite):
         self.falling = True
         self.t_falling = 0
 
+    @staticmethod
+    def load_frames(directory):
+        res = []
+        files = os.listdir(os.path.join(os.getcwd(), directory))
+        for file in files:
+            res.append(load_image(directory, file))
+        return res
+
     def update(self):
+        vx_temp = self.vx
         if pygame.sprite.spritecollideany(self, horizontal_borders):
             self.vy = -self.vy
         if pygame.sprite.spritecollideany(self, vertical_borders):
@@ -117,13 +129,13 @@ class Person(pygame.sprite.Sprite):
             k = 59
             if spr2 is not None:
                 self.rect.y = self.rect.clip(spr2).y - 89
-                if spr2.rect.collidepoint(self.rect.x + 60, self.rect.y + k) or \
+                if spr2.rect.collidepoint(self.rect.x + 40, self.rect.y + k) or \
                         spr2.rect.collidepoint(self.rect.x, self.rect.y + k):
                     self.vx = -self.vx
 
             elif spr4 is not None:
                 self.rect.y = self.rect.clip(spr4).y - 89
-                if spr4.rect.collidepoint(self.rect.x + 60, self.rect.y + k) or \
+                if spr4.rect.collidepoint(self.rect.x + 40, self.rect.y + k) or \
                         spr4.rect.collidepoint(self.rect.x, self.rect.y + k):
                     self.vx = -self.vx
 
@@ -133,9 +145,9 @@ class Person(pygame.sprite.Sprite):
                     self.rect = self.rect.move(0, 30)
                     if not self.t_falling and self.vy < 0:
                         self.rect.y -= 30
-                elif (spr3.rect.collidepoint(self.rect.x + 60, self.rect.y + k) or \
+                elif (spr3.rect.collidepoint(self.rect.x + 40, self.rect.y + k) or
                       spr3.rect.collidepoint(self.rect.x, self.rect.y + k)) and \
-                        not spr3.rect.collidepoint(self.rect.x + 30, self.rect.y + 89):
+                        not spr3.rect.collidepoint(self.rect.x + 20, self.rect.y + 89):
                     self.vx = -self.vx
             if self.t_falling:
                 self.vy = 0
@@ -146,6 +158,17 @@ class Person(pygame.sprite.Sprite):
             self.vy += self.g * self.t_falling
             self.t_falling += 0.01
         self.rect = self.rect.move(self.vx, self.vy)
+        if not self.vx:
+            self.cur = 0
+            self.image = self.frames[0]
+        else:
+            if self.vx > 0:
+                self.frames = self.r_frames
+            else:
+                self.frames = self.l_frames
+            if not self.vy:
+                self.cur = (self.cur + 1) % len(self.frames)
+                self.image = self.frames[self.cur]
 
 
 def start_screen():
@@ -232,8 +255,9 @@ def loaded_level(person, camera):
                     person.vx -= 5
 
                 if pressed[pygame.K_SPACE]:
-                    person.vy -= 10
-                    person.t_falling = 0
+                    if person.t_falling == 0:
+                        person.vy -= 10
+
 
         screen.fill((0, 0, 0))
         all_sprites.update()
