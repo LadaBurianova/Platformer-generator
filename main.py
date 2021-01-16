@@ -86,14 +86,16 @@ class Person(pygame.sprite.Sprite):
 
     def __init__(self, pos_x, pos_y):
         super().__init__(person_sprites, all_sprites)
-        self.image = load_image('person', 'right0001.png')
+        self.image = load_image('right', 'right0001.png')
+        self.rect = self.image.get_rect()
+        self.rect.x = pos_x
+        self.rect.y = pos_y
+
         self.r_frames = self.load_frames('right')
         self.l_frames = self.load_frames('left')
         self.frames = self.r_frames
         self.cur = 0
-        self.rect = self.image.get_rect()
-        self.rect.x = pos_x
-        self.rect.y = pos_y
+
         self.vx = 0
         self.vy = 0
         self.g = 10
@@ -108,8 +110,11 @@ class Person(pygame.sprite.Sprite):
             res.append(load_image(directory, file))
         return res
 
+    def check(self, spr, k):
+        return spr.rect.collidepoint(self.rect.x + 40, self.rect.y + k) or \
+               spr.rect.collidepoint(self.rect.x, self.rect.y + k)
+
     def update(self):
-        vx_temp = self.vx
         if pygame.sprite.spritecollideany(self, horizontal_borders):
             self.vy = -self.vy
         if pygame.sprite.spritecollideany(self, vertical_borders):
@@ -121,22 +126,22 @@ class Person(pygame.sprite.Sprite):
 
         if pygame.sprite.spritecollideany(self, green_cells_sprites):
             end('finish_v0.png')
+            return False
 
         if pygame.sprite.spritecollideany(self, yellow_cells_sprites):
             end('gameover_v0.png')
+            return False
 
         elif pygame.sprite.spritecollideany(self, cells_sprites):
             k = 59
             if spr2 is not None:
                 self.rect.y = self.rect.clip(spr2).y - 89
-                if spr2.rect.collidepoint(self.rect.x + 40, self.rect.y + k) or \
-                        spr2.rect.collidepoint(self.rect.x, self.rect.y + k):
+                if self.check(spr2, k):
                     self.vx = -self.vx
 
             elif spr4 is not None:
                 self.rect.y = self.rect.clip(spr4).y - 89
-                if spr4.rect.collidepoint(self.rect.x + 40, self.rect.y + k) or \
-                        spr4.rect.collidepoint(self.rect.x, self.rect.y + k):
+                if self.check(spr4, k):
                     self.vx = -self.vx
 
             if spr3 is not None:
@@ -145,8 +150,7 @@ class Person(pygame.sprite.Sprite):
                     self.rect = self.rect.move(0, 30)
                     if not self.t_falling and self.vy < 0:
                         self.rect.y -= 30
-                elif (spr3.rect.collidepoint(self.rect.x + 40, self.rect.y + k) or
-                      spr3.rect.collidepoint(self.rect.x, self.rect.y + k)) and \
+                elif self.check(spr3, k) and \
                         not spr3.rect.collidepoint(self.rect.x + 20, self.rect.y + 89):
                     self.vx = -self.vx
             if self.t_falling:
@@ -169,6 +173,73 @@ class Person(pygame.sprite.Sprite):
             if not self.vy:
                 self.cur = (self.cur + 1) % len(self.frames)
                 self.image = self.frames[self.cur]
+        return True
+
+
+def clear_sprite_groups():
+    for nmb in groups_dict:
+        pygame.sprite.Group.empty(groups_dict[nmb])
+    pygame.sprite.Group.empty(person_sprites)
+    pygame.sprite.Group.empty(cells_sprites)
+    pygame.sprite.Group.empty(horizontal_borders)
+    pygame.sprite.Group.empty(vertical_borders)
+    pygame.sprite.Group.empty(all_sprites)
+
+
+def end(img):
+    clear_sprite_groups()
+    image = pygame.image.load(img)
+    screen.fill((0, 0, 0))
+    screen.blit(image, (0, 0))
+    pygame.display.flip()
+    run = True
+    while run:
+        screen.fill((0, 0, 0))
+        screen.blit(image, (0, 0))
+        pygame.display.flip()
+        for ev in pygame.event.get():
+            if ev.type == pygame.KEYDOWN and ev.key == pygame.K_TAB:
+                clear_sprite_groups()
+                start_screen()
+                run = False
+            if ev.type == pygame.QUIT:
+                pygame.quit()
+                exit()
+
+
+def loaded_level(person, camera):
+    screen.fill((0, 0, 0))
+    run = True
+    clock = pygame.time.Clock()
+    while run:
+        clock.tick(FPS)
+        for ev in pygame.event.get():
+            if ev.type == pygame.QUIT:
+                pygame.quit()
+                exit()
+            elif ev.type == pygame.KEYDOWN:
+                if ev.key == pygame.K_TAB:
+                    clear_sprite_groups()
+                    start_screen()
+                pressed = pygame.key.get_pressed()
+                if pressed[pygame.K_d] and pygame.sprite.spritecollideany(person, cells_sprites):
+                    person.vx += 8
+
+                if pressed[pygame.K_a] and pygame.sprite.spritecollideany(person, cells_sprites):
+                    person.vx -= 8
+
+                if pressed[pygame.K_SPACE]:
+                    if person.t_falling == 0:
+                        person.vy -= 10
+
+        screen.fill((0, 0, 0))
+        run = person.update()
+        camera.update(person)
+        for sprite in all_sprites:
+            camera.apply(sprite)
+        cells_sprites.draw(screen)
+        person_sprites.draw(screen)
+        pygame.display.flip()
 
 
 def start_screen():
@@ -179,14 +250,13 @@ def start_screen():
     color_active = pygame.Color('dodgerblue2')
     color = color_inactive
     active = False
-
     run = True
     clock = pygame.time.Clock()
-
     while run:
         for ev in pygame.event.get():
             if ev.type == pygame.QUIT:
-                run = False
+                pygame.quit()
+                exit()
             if ev.type == pygame.MOUSEBUTTONDOWN:
                 if input_box.collidepoint(ev.pos):
                     active = not active
@@ -214,59 +284,8 @@ def start_screen():
         input_box.w = max(200, txt_surface.get_width() + 10)
         screen.blit(txt_surface, (input_box.x + 5, input_box.y + 5))
         pygame.draw.rect(screen, color, input_box, 2)
-
         pygame.display.flip()
         clock.tick(FPS)
-
-
-def end(img):
-    image = pygame.image.load(img)
-    screen.fill((0, 0, 0))
-    screen.blit(image, (0, 0))
-    pygame.display.flip()
-    run = True
-    while run:
-        screen.fill((0, 0, 0))
-        screen.blit(image, (0, 0))
-        pygame.display.flip()
-        for ev in pygame.event.get():
-            if ev.type == pygame.KEYDOWN and ev.key == pygame.K_TAB:
-                start_screen()
-            if ev.type == pygame.QUIT:
-                pygame.quit()
-                exit()
-
-
-def loaded_level(person, camera):
-    screen.fill((0, 0, 0))
-    run = True
-    clock = pygame.time.Clock()
-    while run:
-        clock.tick(FPS)
-        for ev in pygame.event.get():
-            if ev.type == pygame.KEYDOWN:
-                if ev.key == pygame.K_TAB:
-                    start_screen()
-                pressed = pygame.key.get_pressed()
-                if pressed[pygame.K_d] and pygame.sprite.spritecollideany(person, cells_sprites):
-                    person.vx += 5
-
-                if pressed[pygame.K_a] and pygame.sprite.spritecollideany(person, cells_sprites):
-                    person.vx -= 5
-
-                if pressed[pygame.K_SPACE]:
-                    if person.t_falling == 0:
-                        person.vy -= 10
-
-
-        screen.fill((0, 0, 0))
-        all_sprites.update()
-        camera.update(person)
-        for sprite in all_sprites:
-            camera.apply(sprite)
-        cells_sprites.draw(screen)
-        person_sprites.draw(screen)
-        pygame.display.flip()
 
 
 all_sprites = pygame.sprite.Group()
@@ -290,7 +309,5 @@ groups_dict = {'2': full_cells_sprites, '3': down_half_cells_sprites,
 pygame.init()
 screen = pygame.display.set_mode((W, H))
 screen.fill((50, 10, 200))
-
 start_screen()
-
 pygame.quit()
