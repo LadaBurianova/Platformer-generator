@@ -125,7 +125,7 @@ class Person(pygame.sprite.Sprite):
         spr4 = pygame.sprite.spritecollideany(self, top_half_cells_sprites)
 
         if pygame.sprite.spritecollideany(self, green_cells_sprites):
-            end('finish_v0.png')
+            end('finish_v0.png', False)
             return False
 
         if pygame.sprite.spritecollideany(self, yellow_cells_sprites):
@@ -186,7 +186,14 @@ def clear_sprite_groups():
     pygame.sprite.Group.empty(all_sprites)
 
 
-def end(img):
+def end(img, over=True):
+    if over:
+        pygame.mixer.music.load(os.path.join('vol', 'Determination(From Undertale).wav'))
+        pygame.mixer.music.play(loops=-1)
+    else:
+        pygame.mixer.music.load(os.path.join('vol', 'finish.wav'))
+        pygame.mixer.music.play(loops=-1)
+
     clear_sprite_groups()
     image = pygame.image.load(img)
     screen.fill((0, 0, 0))
@@ -200,6 +207,7 @@ def end(img):
         for ev in pygame.event.get():
             if ev.type == pygame.KEYDOWN and ev.key == pygame.K_TAB:
                 clear_sprite_groups()
+                pygame.mixer.music.pause()
                 start_screen()
                 run = False
             if ev.type == pygame.QUIT:
@@ -208,6 +216,8 @@ def end(img):
 
 
 def loaded_level(person, camera):
+    pygame.mixer.music.load(os.path.join('vol', 'Another_Medium(From Undertale).wav'))
+    pygame.mixer.music.play(loops=-1)
     screen.fill((0, 0, 0))
     run = True
     clock = pygame.time.Clock()
@@ -220,6 +230,7 @@ def loaded_level(person, camera):
             elif ev.type == pygame.KEYDOWN:
                 if ev.key == pygame.K_TAB:
                     clear_sprite_groups()
+                    pygame.mixer.music.pause()
                     start_screen()
                 pressed = pygame.key.get_pressed()
                 if pressed[pygame.K_d] and pygame.sprite.spritecollideany(person, cells_sprites):
@@ -307,6 +318,8 @@ vertical_borders.add(Border(6601, -1, 6601, H + 1))
 groups_dict = {'2': full_cells_sprites, '3': down_half_cells_sprites,
                '4': top_half_cells_sprites, '7': yellow_cells_sprites, '8': green_cells_sprites}
 pygame.init()
+pygame.mixer.init()
+pygame.mixer.music.set_volume(0.2)
 screen = pygame.display.set_mode((W, H))
 screen.fill((50, 10, 200))
 start_screen()
