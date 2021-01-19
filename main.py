@@ -116,6 +116,8 @@ class Person(pygame.sprite.Sprite):
 
     def update(self):
         if pygame.sprite.spritecollideany(self, horizontal_borders):
+            if self.t_falling:
+                self.rect.y = 0
             self.vy = -self.vy
         if pygame.sprite.spritecollideany(self, vertical_borders):
             self.vx = -self.vx
@@ -289,7 +291,7 @@ def start_screen():
                                 camera = Camera()
                                 field = Field(f)
                                 add_borders()
-                                person = Person(0, 50)
+                                person = Person(0, 0)
                                 person.add(person_sprites)
                                 loaded_level(person, camera)
                         except FileNotFoundError:
