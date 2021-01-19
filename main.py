@@ -186,6 +186,13 @@ def clear_sprite_groups():
     pygame.sprite.Group.empty(all_sprites)
 
 
+def add_borders():
+    horizontal_borders.add(Border(-1, -1, 6601, -1))
+    horizontal_borders.add(Border(-1, H + 1, 6601, H + 1))
+    vertical_borders.add(Border(-1, -1, -1, H + 1))
+    vertical_borders.add(Border(6601, -1, 6601, H + 1))
+
+
 def end(img, over=True):
     if over:
         pygame.mixer.music.load(os.path.join('vol', 'Determination(From Undertale).wav'))
@@ -281,6 +288,7 @@ def start_screen():
                             with open(text, 'r', encoding='utf-8') as f:
                                 camera = Camera()
                                 field = Field(f)
+                                add_borders()
                                 person = Person(0, 50)
                                 person.add(person_sprites)
                                 loaded_level(person, camera)
@@ -310,10 +318,6 @@ down_half_cells_sprites = pygame.sprite.Group()
 person_sprites = pygame.sprite.Group()
 horizontal_borders = pygame.sprite.Group()
 vertical_borders = pygame.sprite.Group()
-horizontal_borders.add(Border(-1, -1, 6601, -1))
-horizontal_borders.add(Border(-1, H + 1, 6601, H + 1))
-vertical_borders.add(Border(-1, -1, -1, H + 1))
-vertical_borders.add(Border(6601, -1, 6601, H + 1))
 
 groups_dict = {'2': full_cells_sprites, '3': down_half_cells_sprites,
                '4': top_half_cells_sprites, '7': yellow_cells_sprites, '8': green_cells_sprites}
