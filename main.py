@@ -33,7 +33,7 @@ class Field:
                           [[Cell('7', i, 110)] for i in range(110)]
 
     def load_level(self):
-        reader = csv.reader(self.opened_f, delimiter=';', quotechar='"')
+        reader = csv.reader(self.opened_f, delimiter=';', quotechar='\n')
         y = 0
         for line in reader:
             self.matrix.append([Cell(line[i], i, y) if line[i] != '1' else '1' for i in range(len(line))])
@@ -41,8 +41,8 @@ class Field:
         self.opened_f.close()
 
     def save_level(self, f_name):
-        with open(f_name, 'w', encoding='utf-8') as f_w:
-            writer = csv.writer(f_w, delimiter=';', quotechar='"')
+        with open(f_name, 'w', newline='\n', encoding='utf-8') as f_w:
+            writer = csv.writer(f_w, delimiter=';', quotechar='\n')
             for line in self.matrix:
                 writer.writerow(line)
 
