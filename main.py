@@ -9,6 +9,13 @@ FPS = 20
 
 COLOR_INACTIVE = pygame.Color('lightskyblue3')
 COLOR_ACTIVE = pygame.Color('dodgerblue2')
+COLOR_BG1 = (50, 10, 200)
+COLOR_BG2 = (0, 0, 0)
+
+
+pygame.init()
+INPUT_FONT = pygame.font.Font(None, 32)
+COMMENT_FONT = pygame.font.Font(None, 40)
 
 
 def load_image(folder, name):
@@ -273,7 +280,7 @@ def end(img, over=True):
     pygame.display.flip()
     run = True
     while run:
-        screen.fill((0, 0, 0))
+        screen.fill(COLOR_BG2)
         screen.blit(image, (0, 0))
         pygame.display.flip()
         for ev in pygame.event.get():
@@ -290,7 +297,7 @@ def end(img, over=True):
 def loaded_level(person, camera):
     pygame.mixer.music.load(os.path.join('vol', 'Another_Medium(From Undertale).wav'))
     pygame.mixer.music.play(loops=-1)
-    screen.fill((0, 0, 0))
+    screen.fill(COLOR_BG2)
     run = True
     clock = pygame.time.Clock()
     while run:
@@ -315,7 +322,7 @@ def loaded_level(person, camera):
                     if person.t_falling == 0:
                         person.vy -= 10
 
-        screen.fill((0, 0, 0))
+        screen.fill(COLOR_BG2)
         run = person.update()
         camera.update(person)
         for sprite in all_sprites:
@@ -327,7 +334,7 @@ def loaded_level(person, camera):
 
 def redactor():
     field = Field()
-    screen.fill((0, 0, 0))
+    screen.fill(COLOR_BG2)
     pygame.mixer.music.load(os.path.join('vol', 'Spooktune.mp3'))
     pygame.mixer.music.play(loops=-1)
     run = True
@@ -358,14 +365,13 @@ def redactor():
                     pygame.mixer.music.pause()
                     clear_sprite_groups()
                     saving(field)
-        screen.fill((0, 0, 0))
+        screen.fill(COLOR_BG2)
         cells_sprites.draw(screen)
         pygame.display.flip()
 
 
 def saving(field):
     input_box = pygame.Rect(200, 200, 150, 32)
-    font = pygame.font.Font(None, 32)
     text = ''
     color = COLOR_INACTIVE
     active = False
@@ -389,7 +395,12 @@ def saving(field):
                     else:
                         text += ev.unicode
         screen.fill((30, 30, 30))
-        txt_surface = font.render(text, True, color)
+        txt_surface = INPUT_FONT.render(text, True, color)
+        comment = ['* Чтобы сохранить карту,',
+                   '        1. ведите имя файла,',
+                   '        2. нажмите enter.', '',
+                   '  После этого вы вернётесь на главный экран.']
+        display_text(comment, 300, COMMENT_FONT)
         input_box.w = max(200, txt_surface.get_width() + 10)
         screen.blit(txt_surface, (input_box.x + 5, input_box.y + 5))
         pygame.draw.rect(screen, color, input_box, 2)
@@ -399,7 +410,6 @@ def saving(field):
 
 def start_screen():
     input_box = pygame.Rect(100, 100, 150, 32)
-    font = pygame.font.Font(None, 32)
     text = ''
     color = COLOR_INACTIVE
     active = False
@@ -433,12 +443,31 @@ def start_screen():
                     else:
                         text += ev.unicode
         screen.fill((30, 30, 30))
-        txt_surface = font.render(text, True, color)
+        txt_surface = INPUT_FONT.render(text, True, color)
         input_box.w = max(200, txt_surface.get_width() + 10)
+        comment = ['* Чтобы создать карту,',
+                   '        1. нажмите на прямоугольную область,',
+                   '        2. нажмите enter.', '',
+                   '* Чтобы загрузить готовую карту,',
+                   '        1. нажмите на прямоугольную область,',
+                   '        2. введите название файла,',
+                   '        3. нажмите enter.']
+        display_text(comment, 200, COMMENT_FONT)
         screen.blit(txt_surface, (input_box.x + 5, input_box.y + 5))
         pygame.draw.rect(screen, color, input_box, 2)
         pygame.display.flip()
         clock.tick(FPS)
+
+
+def display_text(text_to_display, text_coord, font):
+    for line in text_to_display:
+        string_rendered = font.render(line, True, COLOR_INACTIVE)
+        intro_rect = string_rendered.get_rect()
+        text_coord += 12
+        intro_rect.top = text_coord
+        intro_rect.x = 10
+        text_coord += intro_rect.height
+        screen.blit(string_rendered, intro_rect)
 
 
 def change_color(input_box, ev, active):
@@ -467,10 +496,9 @@ groups_dict = {'2': full_cells_sprites, '3': down_half_cells_sprites,
                '4': top_half_cells_sprites, '7': yellow_cells_sprites,
                '8': green_cells_sprites, '1': empty_cells_sprites}
 
-pygame.init()
 pygame.mixer.init()
 pygame.mixer.music.set_volume(0.2)
 screen = pygame.display.set_mode((W, H))
-screen.fill((50, 10, 200))
+screen.fill(COLOR_BG1)
 start_screen()
 pygame.quit()
