@@ -7,6 +7,9 @@ W = 800  # width of window
 H = 600  # height of window
 FPS = 20
 
+COLOR_INACTIVE = pygame.Color('lightskyblue3')
+COLOR_ACTIVE = pygame.Color('dodgerblue2')
+
 
 def load_image(folder, name):
     """  Loading image.  """
@@ -353,6 +356,7 @@ def redactor():
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_RETURN:
                     pygame.mixer.music.pause()
+                    clear_sprite_groups()
                     saving(field)
         screen.fill((0, 0, 0))
         cells_sprites.draw(screen)
@@ -363,9 +367,7 @@ def saving(field):
     input_box = pygame.Rect(200, 200, 150, 32)
     font = pygame.font.Font(None, 32)
     text = ''
-    color_inactive = pygame.Color('lightskyblue3')
-    color_active = pygame.Color('dodgerblue2')
-    color = color_inactive
+    color = COLOR_INACTIVE
     active = False
     run = True
     clock = pygame.time.Clock()
@@ -375,11 +377,7 @@ def saving(field):
                 pygame.quit()
                 exit()
             if ev.type == pygame.MOUSEBUTTONDOWN:
-                if input_box.collidepoint(ev.pos):
-                    active = not active
-                else:
-                    active = False
-                color = color_active if active else color_inactive
+                active, color = change_color(input_box, ev, active)
             if ev.type == pygame.KEYDOWN:
                 if active:
                     if ev.key == pygame.K_RETURN:
@@ -403,9 +401,7 @@ def start_screen():
     input_box = pygame.Rect(100, 100, 150, 32)
     font = pygame.font.Font(None, 32)
     text = ''
-    color_inactive = pygame.Color('lightskyblue3')
-    color_active = pygame.Color('dodgerblue2')
-    color = color_inactive
+    color = COLOR_INACTIVE
     active = False
     run = True
     clock = pygame.time.Clock()
@@ -415,11 +411,7 @@ def start_screen():
                 pygame.quit()
                 exit()
             if ev.type == pygame.MOUSEBUTTONDOWN:
-                if input_box.collidepoint(ev.pos):
-                    active = not active
-                else:
-                    active = False
-                color = color_active if active else color_inactive
+                active, color = change_color(input_box, ev, active)
             if ev.type == pygame.KEYDOWN:
                 if active:
                     if ev.key == pygame.K_RETURN:
@@ -447,6 +439,15 @@ def start_screen():
         pygame.draw.rect(screen, color, input_box, 2)
         pygame.display.flip()
         clock.tick(FPS)
+
+
+def change_color(input_box, ev, active):
+    if input_box.collidepoint(ev.pos):
+        active = not active
+    else:
+        active = False
+    color = COLOR_ACTIVE if active else COLOR_INACTIVE
+    return active, color
 
 
 all_sprites = pygame.sprite.Group()
