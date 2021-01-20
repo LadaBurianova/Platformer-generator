@@ -30,13 +30,18 @@ class Field:
             self.load_level()
         else:
             self.matrix = [[Cell('1', i, j) for i in range(110)] for j in range(9)] + \
-                          [[Cell('7', i, 110)] for i in range(110)]
+                          [[Cell('7', i, 9) for i in range(110)]]
+        self.place = None
+        self.x = 0
+        self.locked = False
 
     def load_level(self):
-        reader = csv.reader(self.opened_f, delimiter=';', quotechar='\n')
+        reader = csv.reader(self.opened_f, delimiter=';', quotechar='"')
         y = 0
         for line in reader:
-            self.matrix.append([Cell(line[i], i, y) if line[i] != '1' else '1' for i in range(len(line))])
+            self.matrix.append(
+                [Cell(line[i], i, y) if line[i] != '1' else '1' for i in
+                 range(len(line))])
             y += 1
         self.opened_f.close()
 
@@ -45,6 +50,32 @@ class Field:
             writer = csv.writer(f_w, delimiter=';', quotechar='\n')
             for line in self.matrix:
                 writer.writerow(line)
+
+    def lock(self, pos):
+        self.place = pos[0]
+        for row in self.matrix:
+            for cell in row:
+                cell.lock(pos)
+        self.locked = True
+
+    def unlock(self):
+        for row in self.matrix:
+            for cell in row:
+                cell.unlock()
+        self.locked = False
+
+    def move(self, pos):
+        if self.locked:
+            for row in self.matrix:
+                for cell in row:
+                    cell.move(pos)
+            shift = pos[0] - self.place
+            self.place = pos[0]
+            self.x += shift
+
+    def change(self, pos):
+        cell = [(pos[0] - self.x) // 60, pos[1] // 60]
+        self.matrix[cell[1]][cell[0]].switch()
 
 
 class Cell(pygame.sprite.Sprite):
@@ -55,6 +86,33 @@ class Cell(pygame.sprite.Sprite):
         self.image = load_image('cells', n + Cell.EXP)
         self.mask = pygame.mask.from_surface(self.image)
         self.rect = self.image.get_rect().move(60 * pos_x, 60 * pos_y)
+        self.shift = 0
+        self.locked = False
+        self.place = None
+        self.all = ['1', '2', '3', '4', '7', '8']
+        self.n = self.all.index(n)
+        self.pos = [pos_x, pos_y]
+
+    def __repr__(self):
+        return str(self.all[self.n])
+
+    def lock(self, pos):
+        self.locked = True
+        self.place = pos[0]
+
+    def unlock(self):
+        self.locked = False
+
+    def move(self, pos):
+        if self.locked:
+            shift = pos[0] - self.place
+            self.rect.x += shift
+            self.place = pos[0]
+
+    def switch(self):
+        self.n = (self.n + 1) % 6
+        self.image = load_image('cells', self.all[self.n] + Cell.EXP)
+        self.mask = pygame.mask.from_surface(self.image)
 
 
 class Border(pygame.sprite.Sprite):
@@ -155,6 +213,7 @@ class Person(pygame.sprite.Sprite):
                 elif self.check(spr3, k) and \
                         not spr3.rect.collidepoint(self.rect.x + 20, self.rect.y + 89):
                     self.vx = -self.vx
+
             if self.t_falling:
                 self.vy = 0
                 self.vx = 0
@@ -262,6 +321,83 @@ def loaded_level(person, camera):
         pygame.display.flip()
 
 
+def redactor():
+    field = Field()
+    screen.fill((0, 0, 0))
+    pygame.mixer.music.load(os.path.join('vol', 'Spooktune.mp3'))
+    pygame.mixer.music.play(loops=-1)
+    run = True
+    clock = pygame.time.Clock()
+    while run:
+        clock.tick(FPS)
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                exit()
+            elif event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_TAB:
+                    clear_sprite_groups()
+                    pygame.mixer.music.pause()
+                    start_screen()
+            elif event.type == pygame.MOUSEBUTTONDOWN:
+                if event.button == 1:
+                    field.lock(event.pos)
+                if event.button == 3:
+                    field.change(event.pos)
+            elif event.type == pygame.MOUSEBUTTONUP:
+                if event.button == 1:
+                    field.unlock()
+            elif event.type == pygame.MOUSEMOTION:
+                field.move(event.pos)
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_RETURN:
+                    pygame.mixer.music.pause()
+                    saving(field)
+        screen.fill((0, 0, 0))
+        cells_sprites.draw(screen)
+        pygame.display.flip()
+
+
+def saving(field):
+    input_box = pygame.Rect(200, 200, 150, 32)
+    font = pygame.font.Font(None, 32)
+    text = ''
+    color_inactive = pygame.Color('lightskyblue3')
+    color_active = pygame.Color('dodgerblue2')
+    color = color_inactive
+    active = False
+    run = True
+    clock = pygame.time.Clock()
+    while run:
+        for ev in pygame.event.get():
+            if ev.type == pygame.QUIT:
+                pygame.quit()
+                exit()
+            if ev.type == pygame.MOUSEBUTTONDOWN:
+                if input_box.collidepoint(ev.pos):
+                    active = not active
+                else:
+                    active = False
+                color = color_active if active else color_inactive
+            if ev.type == pygame.KEYDOWN:
+                if active:
+                    if ev.key == pygame.K_RETURN:
+                        if not text == '':
+                            field.save_level(text)
+                            start_screen()
+                    elif ev.key == pygame.K_BACKSPACE:
+                        text = text[:-1]
+                    else:
+                        text += ev.unicode
+        screen.fill((30, 30, 30))
+        txt_surface = font.render(text, True, color)
+        input_box.w = max(200, txt_surface.get_width() + 10)
+        screen.blit(txt_surface, (input_box.x + 5, input_box.y + 5))
+        pygame.draw.rect(screen, color, input_box, 2)
+        pygame.display.flip()
+        clock.tick(FPS)
+
+
 def start_screen():
     input_box = pygame.Rect(100, 100, 150, 32)
     font = pygame.font.Font(None, 32)
@@ -286,16 +422,19 @@ def start_screen():
             if ev.type == pygame.KEYDOWN:
                 if active:
                     if ev.key == pygame.K_RETURN:
-                        try:
-                            with open(text, 'r', encoding='utf-8') as f:
-                                camera = Camera()
-                                field = Field(f)
-                                add_borders()
-                                person = Person(0, 0)
-                                person.add(person_sprites)
-                                loaded_level(person, camera)
-                        except FileNotFoundError:
-                            text = ''
+                        if text != '':
+                            try:
+                                with open(text, 'r', encoding='utf-8') as f:
+                                    camera = Camera()
+                                    Field(f)
+                                    add_borders()
+                                    person = Person(0, 1)
+                                    person.add(person_sprites)
+                                    loaded_level(person, camera)
+                            except FileNotFoundError:
+                                text = ''
+                        else:
+                            redactor()
                     elif ev.key == pygame.K_BACKSPACE:
                         text = text[:-1]
                     else:
@@ -316,13 +455,16 @@ green_cells_sprites = pygame.sprite.Group()
 full_cells_sprites = pygame.sprite.Group()
 top_half_cells_sprites = pygame.sprite.Group()
 down_half_cells_sprites = pygame.sprite.Group()
+empty_cells_sprites = pygame.sprite.Group()
 
 person_sprites = pygame.sprite.Group()
 horizontal_borders = pygame.sprite.Group()
 vertical_borders = pygame.sprite.Group()
 
 groups_dict = {'2': full_cells_sprites, '3': down_half_cells_sprites,
-               '4': top_half_cells_sprites, '7': yellow_cells_sprites, '8': green_cells_sprites}
+               '4': top_half_cells_sprites, '7': yellow_cells_sprites,
+               '8': green_cells_sprites, '1': empty_cells_sprites}
+
 pygame.init()
 pygame.mixer.init()
 pygame.mixer.music.set_volume(0.2)
