@@ -75,7 +75,8 @@ class Field:
 
     def change(self, pos):
         cell = [(pos[0] - self.x) // 60, pos[1] // 60]
-        self.matrix[cell[1]][cell[0]].switch()
+        if 0 <= cell[0] < 110 and 0 <= cell[1] < 11:
+            self.matrix[cell[1]][cell[0]].switch()
 
 
 class Cell(pygame.sprite.Sprite):
